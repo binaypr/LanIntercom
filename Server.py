@@ -25,7 +25,7 @@ def get_ip():
 #endregion
 
 #region SERVER CODE
-def accept_wrapper(sock):
+def accept_wrapper(sock,sel):
     conn, addr = sock.accept()  # Should be ready to read
     print("accepted connection from", addr)
     conn.setblocking(False)
@@ -33,7 +33,7 @@ def accept_wrapper(sock):
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(conn, events, data=data)
 
-def service_connection(key, mask):
+def service_connection(key, mask,sel):
     sock = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
@@ -48,6 +48,7 @@ def service_connection(key, mask):
         if data.outb:
             ##PRINTS
             print(data.outb.decode())
+            engine = pyttsx3.init()
             engine.say(data.outb.decode())
             engine.runAndWait()
 
@@ -55,16 +56,15 @@ def service_connection(key, mask):
             data.outb = data.outb[sent:]
 
 def startServer():
-        
-
     host  = get_ip()
     port =  1234
     num_conns = 1000
 
     sel = selectors.DefaultSelector()
-    engine = pyttsx3.init()
+    
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setblocking(False)
+    
 
     lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     lsock.bind((host, port))
@@ -78,9 +78,9 @@ def startServer():
             events = sel.select(timeout=None)
             for key, mask in events:
                 if key.data is None:
-                    accept_wrapper(key.fileobj)
+                    accept_wrapper(key.fileobj,sel)
                 else:
-                    service_connection(key, mask)
+                    service_connection(key, mask,sel)
     except KeyboardInterrupt:
         print("caught keyboard interrupt, exiting")
     finally:
@@ -162,7 +162,7 @@ def findlistofHosts():
 retry = 2
 delay = 1
 timeout = 3
-listofhosts = ['192.168.1.164', '192.168.1.223']
+listofhosts = ['192.168.1.223']
 
 #endregion ClientCode
 
@@ -208,10 +208,10 @@ def sendMessage(message):
 if __name__== '__main__': 
     p1 = Process(target = startServer)
     p1.start()
-    p2 = Process(target = chatGui)
-    p2.start()
+    # p2 = Process(target = chatGui)
+    # p2.start()
     p1.join()
-    p2.join()
+    # p2.join()
 
 
 
