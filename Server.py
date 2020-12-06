@@ -181,6 +181,7 @@ def chatGui():
         input_get = input_field.get()
         print(input_get)
         messages.insert(INSERT, '%s\n' % input_get)
+        print(input__get)
         sendMessage(input_get)
         # label = Label(window, text=input_get)
         input_user.set(' ')
@@ -197,21 +198,23 @@ def chatGui():
 
 def sendMessage(message):
     for x in listofhosts:
+        print(x)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((x, 1234))
             sendme = message
             s.sendall(sendme.encode())
             data = s.recv(1024)
+            s.disconnect()
 
 #endregion Chat Code
 
 if __name__== '__main__': 
-    p1 = Process(target = startServer)
-    p1.start()
-    # p2 = Process(target = chatGui)
-    # p2.start()
-    p1.join()
-    # p2.join()
+##    p1 = Process(target = startServer)
+##    p1.start()
+      p2 = Process(target = chatGui)
+      p2.start()
+##    p1.join()
+      p2.join()
 
 
 
