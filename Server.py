@@ -1,18 +1,14 @@
-# region Imports
+import os 
 import socket
+import tkinter as tk
+import datetime
 import time
-import sys
-import subprocess
+import threading
 import selectors
 import types
 import pyttsx3
-from tkinter import *
-from multiprocessing import Process
-
-# endregion Imports
-
-# region GENERAL CODE
-
+import concurrent.futures
+import subprocess
 
 
 def get_ip():
@@ -25,49 +21,11 @@ def get_ip():
     finally:
         s.close()
     return IP
-# endregion
-
-# region SERVER CODE
 
 
-def accept_wrapper(sock, sel):
-    conn, addr = sock.accept()  # Should be ready to read
-    print("accepted connection from", addr)
-    conn.setblocking(False)
-    data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
-    events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    sel.register(conn, events, data=data)
-
-
-def service_connection(key, mask, sel):
-    global messages
-    sock = key.fileobj
-    data = key.data
-    if mask & selectors.EVENT_READ:
-        recv_data = sock.recv(1024)  # Should be ready to read
-        if recv_data:
-            data.outb += recv_data
-        else:
-            print("closing connection to", data.addr)
-            sel.unregister(sock)
-            sock.close()
-    if mask & selectors.EVENT_WRITE:
-        if data.outb:
-            # PRINTS
-            incoming = data.outb.decode()
-            print(incoming)
-            engine = pyttsx3.init()
-            engine.say(incoming)
-            engine.runAndWait()
-            updateChat(incoming)
-
-            sent = sock.send(data.outb)  # Should be ready to write
-            data.outb = data.outb[sent:]
-
-
-def startServer():
+def startServer(window):
     host = get_ip()
-    port = 1234
+    port = 2345
     num_conns = 1000
 
     sel = selectors.DefaultSelector()
@@ -79,6 +37,8 @@ def startServer():
     lsock.bind((host, port))
     lsock.listen()
     print("listening on", (host, port))
+    print("\n"*2)
+    print("--"*10)
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
@@ -89,14 +49,79 @@ def startServer():
                 if key.data is None:
                     accept_wrapper(key.fileobj, sel)
                 else:
-                    service_connection(key, mask, sel)
+                    service_connection(key, mask, sel, window)
     except KeyboardInterrupt:
         print("caught keyboard interrupt, exiting")
     finally:
         sel.close()
-# endregion
 
-# region CLIENT CODE
+def service_connection(key, mask, sel, window):
+    sock = key.fileobj
+    data = key.data
+    if mask & selectors.EVENT_READ:
+        recv_data = sock.recv(1024)  # Should be ready to read
+        if recv_data:
+            data.outb += recv_data
+        else:
+            sel.unregister(sock)
+            sock.close()
+    if mask & selectors.EVENT_WRITE:
+        if data.outb:
+            # PRINTS
+            incoming = data.outb.decode()
+            engine = pyttsx3.init()
+            engine.say(incoming)
+            engine.runAndWait()
+            print("Incoming: ", incoming)
+            update(window, incoming)
+            sent = sock.send(data.outb)  # Should be ready to write
+            data.outb = data.outb[sent:]
+
+def accept_wrapper(sock, sel):
+    conn, addr = sock.accept()  # Should be ready to read
+    conn.setblocking(False)
+    data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
+    events = selectors.EVENT_READ | selectors.EVENT_WRITE
+    sel.register(conn, events, data=data)
+
+def gui(window, listofhosts):
+    messages = tk.Text()
+    messages.pack()
+    inputVar = tk.StringVar()
+
+    inputField = tk.Entry(text=inputVar)
+    inputField.pack()
+
+    message = inputField.get()
+    
+    inputField.bind("<Return>", lambda eff: sendMessage(window, inputVar, inputField.get(), listofhosts, eff))
+
+
+def sendMessage(window, inputVar, message, listofhosts, event=None):
+    print("Sent: ", message)
+
+    for x in listofhosts:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((x, 2345))
+                sendme = message
+                s.sendall(sendme.encode())
+                data = s.recv(1024)
+                s.close()
+        except:
+            pass
+    window.winfo_children()[0].insert(tk.END, "Sent: ")
+    window.winfo_children()[0].insert(tk.END, message)
+    window.winfo_children()[0].insert(tk.END, "\n"*2)
+    inputVar.set("")
+    
+    
+
+
+def update(window, message):
+    window.winfo_children()[0].insert(tk.END, "Incoming: ")
+    window.winfo_children()[0].insert(tk.END, message)
+    window.winfo_children()[0].insert(tk.END, "\n"*2)
 
 
 def findListofIps():
@@ -149,10 +174,9 @@ def checkHost(ip, port):
 def findlistofHosts():
     iterdynamics = iter(findListofIps())
     next(iterdynamics)
+    returndicts = []
 
     # listofhosts = ['192.168.1.164', '192.168.1.223']
-    global listofhosts
-
     for x in iterdynamics:
         ip = x[0]
         flag = False
@@ -171,100 +195,33 @@ def findlistofHosts():
         #     print(ip + " is UP")
         if flag:
             print(ip)
-            listofhosts.append(ip)
+            returndicts.append(ip)
+    return returndicts
+            
 
 retry = 2
 delay = 1
 timeout = 3
 
 
-# endregion ClientCode
 
-# region CHAT CODE
+window = tk.Tk()
 
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    future = executor.submit(findlistofHosts)
+    listofhosts = future.result()
+    executor.shutdown()
 
+print(listofhosts)
 
+x = threading.Thread(target=startServer, args=(window,))
+x.start()
 
-def sendMessage(message, listofhosts):
-    for x in listofhosts:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((x, 1234))
-                sendme = message
-                s.sendall(sendme.encode())
-                data = s.recv(1024)
-                s.close()
-        except:
-            pass
+y = threading.Thread(target=gui, args=(window, listofhosts))
+y.start()
 
 
-# endregion Chat Code
-
-
-def enter(event = None):
-    global window
-    children = [entry for entry in window.winfo_children()]
-    print(children)
-    input_get = children[1].get()
-    print(input_get)
-    sendMessage(input_get, listofhosts)
-    children[0].insert(END, input_get)
-
-    return "break"
-
-def updateChat(message):
-    global window
-    print([entry for entry in window.winfo_children()])
-    window.messages.insert(message)
-    window.title("Chat Box")
-
-window = Tk()
-
-def gui():
-    global window
-
-    messages = Text(window)
-    messages.pack()
-
-    input_user = StringVar()
-    inputfield = Entry(window, text = input_user)
-    inputfield.pack(side=BOTTOM, fill = X)
-
-    frame = Frame(window)
-    frame.pack()
-    def clearText(event):
-        enter(event)
-        input_user.set("")
-    
-
-    inputfield.bind("<Return>", func = clearText)
-    window.mainloop()
-    
-listofhosts = []
-
-if __name__ == '__main__':
-    print("\n Finding List of Hosts")
-    p3 = Process(target = findlistofHosts)
-    p3.start()
-    p3.join()
-
-
-    print("\nStarting Local Server")
-    p1 = Process(target=startServer)
-    p1.start()
-
-    print("\nStarting Local Chat")
-    p2 = Process(target=gui)
-    p2.start()
-
-    p1.join()
-    p2.join()
-    
-    
-
-
-
-
-
+window.mainloop()
+print("Done")
 
 
