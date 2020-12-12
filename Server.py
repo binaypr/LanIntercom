@@ -59,10 +59,7 @@ def service_connection(key, mask, sel):
             engine = pyttsx3.init()
             engine.say(incoming)
             engine.runAndWait()
-            global chat
-            chat.append(incoming);
-            print("updated:")
-            print(chat)
+            updateChat(incoming)
 
             sent = sock.send(data.outb)  # Should be ready to write
             data.outb = data.outb[sent:]
@@ -203,57 +200,66 @@ def sendMessage(message, listofhosts):
 
 
 # endregion Chat Code
-window = Tk()
-chat = []
 
 
-messages = Text(window)
-messages.pack()
-
-input_user = StringVar()
-inputfield = Entry(window, text = input_user)
-inputfield.pack(side=BOTTOM, fill = X)
-
-def enter(event):
-    input_get = inputfield.get()
+def enter(event = None):
+    global window
+    children = [entry for entry in window.winfo_children()]
+    print(children)
+    input_get = children[1].get()
     print(input_get)
-    input_user.set(' ')
-    messages.insert(END, input_get)
+    children[0].insert(END, input_get)
+
     return "break"
 
-def updateChat():
-    global chat
-    for x in chat:
-        messages.insert(END, x)
-    chat = []
-    window.after(2000, updateChat)
+def updateChat(message):
+    global window
+    print([entry for entry in window.winfo_children()])
+    window.messages.insert(message)
+    window.title("Chat Box")
 
+window = Tk()
 
-frame = Frame(window)
-frame.pack()
-inputfield.bind("<Return>", enter)
-window.after(2000, updateChat)
-window.mainloop()
+def gui():
+    global window
 
+    messages = Text(window)
+    messages.pack()
 
+    input_user = StringVar()
+    inputfield = Entry(window, text = input_user)
+    inputfield.pack(side=BOTTOM, fill = X)
 
+    frame = Frame(window)
+    frame.pack()
+    def clearText(event):
+        enter(event)
+        input_user.set("")
+    
 
+    inputfield.bind("<Return>", func = clearText)
+    window.mainloop()
+    
 
 
 if __name__ == '__main__':
     
-    # print("\nStarting Local Server")
-    # p1 = Process(target=startServer)
-    # p1.start()
+    print("\nStarting Local Server")
+    p1 = Process(target=startServer)
+    p1.start()
 
     print("\nStarting Local Chat")
-    p2 = Process(target=startServer)
+    p2 = Process(target=gui)
     p2.start()
 
-    p3 = Process(target=updateChat)
-    p3.start()
-
-
-    # p1.join()
+    p1.join()
     p2.join()
-    p3.join()
+    # p3.join()
+
+
+
+
+
+
+
+
