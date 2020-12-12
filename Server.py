@@ -14,6 +14,7 @@ from multiprocessing import Process
 # region GENERAL CODE
 
 
+
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -39,6 +40,7 @@ def accept_wrapper(sock, sel):
 
 
 def service_connection(key, mask, sel):
+    global messages
     sock = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
@@ -52,10 +54,15 @@ def service_connection(key, mask, sel):
     if mask & selectors.EVENT_WRITE:
         if data.outb:
             # PRINTS
-            print(data.outb.decode())
+            incoming = data.outb.decode()
+            print(incoming)
             engine = pyttsx3.init()
-            engine.say(data.outb.decode())
+            engine.say(incoming)
             engine.runAndWait()
+            global chat
+            chat.append(incoming);
+            print("updated:")
+            print(chat)
 
             sent = sock.send(data.outb)  # Should be ready to write
             data.outb = data.outb[sent:]
@@ -180,34 +187,6 @@ timeout = 3
 # region CHAT CODE
 
 
-def chatGui():
-    window = Tk()
-
-    messages = Text(window)
-    messages.pack()
-
-    input_user = StringVar()
-    input_field = Entry(window, text=input_user)
-    input_field.pack(side=BOTTOM, fill=X)
-    listofhosts = findlistofHosts()
-    
-
-    def Enter_pressed(event):
-        input_get = input_field.get()
-        print(input_get)
-        messages.insert(INSERT, '%s\n' % input_get)
-
-        sendMessage(input_get, listofhosts)
-        # label = Label(window, text=input_get)
-        input_user.set(' ')
-        # label.pack()
-        return "break"
-
-    frame = Frame(window)  # , width=300, height=300)
-    input_field.bind("<Return>", Enter_pressed)
-    frame.pack()
-
-    window.mainloop()
 
 
 def sendMessage(message, listofhosts):
@@ -221,33 +200,60 @@ def sendMessage(message, listofhosts):
                 s.close()
         except:
             pass
-        
+
 
 # endregion Chat Code
+window = Tk()
+chat = []
+
+
+messages = Text(window)
+messages.pack()
+
+input_user = StringVar()
+inputfield = Entry(window, text = input_user)
+inputfield.pack(side=BOTTOM, fill = X)
+
+def enter(event):
+    input_get = inputfield.get()
+    print(input_get)
+    input_user.set(' ')
+    messages.insert(END, input_get)
+    return "break"
+
+def updateChat():
+    global chat
+    for x in chat:
+        messages.insert(END, x)
+    chat = []
+    window.after(2000, updateChat)
+
+
+frame = Frame(window)
+frame.pack()
+inputfield.bind("<Return>", enter)
+window.after(2000, updateChat)
+window.mainloop()
+
+
+
+
+
 
 if __name__ == '__main__':
     
-    
-    print("\nFinding List of Hosts:")
-    
-    print("\n")
-    print("\n")
-    print("\n")
-    print("____")
-    print("____")
-    print("\n")
-    print("\n")
-    print("\n")
-    
-    print("\nStarting Local Server")
-    p1 = Process(target=startServer)
-    p1.start()
+    # print("\nStarting Local Server")
+    # p1 = Process(target=startServer)
+    # p1.start()
 
     print("\nStarting Local Chat")
-    p2 = Process(target=chatGui)
+    p2 = Process(target=startServer)
     p2.start()
 
-    p1.join()
+    p3 = Process(target=updateChat)
+    p3.start()
+
+
+    # p1.join()
     p2.join()
-    print("\n Hosts:")
-    print(listofhosts)
+    p3.join()
