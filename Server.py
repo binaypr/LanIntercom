@@ -151,7 +151,7 @@ def findlistofHosts():
     next(iterdynamics)
 
     # listofhosts = ['192.168.1.164', '192.168.1.223']
-    listofhosts = []
+    global listofhosts
 
     for x in iterdynamics:
         ip = x[0]
@@ -172,7 +172,6 @@ def findlistofHosts():
         if flag:
             print(ip)
             listofhosts.append(ip)
-    return listofhosts
 
 retry = 2
 delay = 1
@@ -208,6 +207,7 @@ def enter(event = None):
     print(children)
     input_get = children[1].get()
     print(input_get)
+    sendMessage(input_get, listofhosts)
     children[0].insert(END, input_get)
 
     return "break"
@@ -240,10 +240,15 @@ def gui():
     inputfield.bind("<Return>", func = clearText)
     window.mainloop()
     
-
+listofhosts = []
 
 if __name__ == '__main__':
-    
+    print("\n Finding List of Hosts")
+    p3 = Process(target = findlistofHosts)
+    p3.start()
+    p3.join()
+
+
     print("\nStarting Local Server")
     p1 = Process(target=startServer)
     p1.start()
@@ -254,8 +259,8 @@ if __name__ == '__main__':
 
     p1.join()
     p2.join()
-    # p3.join()
-
+    
+    
 
 
 
