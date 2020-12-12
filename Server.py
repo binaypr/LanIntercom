@@ -85,19 +85,22 @@ def accept_wrapper(sock, sel):
     sel.register(conn, events, data=data)
 
 def gui(window, listofhosts):
-    messages = tk.Text()
-    messages.pack()
+    messages = tk.Text(font = ('calibre', 14, "normal"))
+    messages.pack(fill ="both", expand = True)
     inputVar = tk.StringVar()
 
-    inputField = tk.Entry(text=inputVar)
-    inputField.pack()
-
-    message = inputField.get()
+    inputField = tk.Text(font = ('calibre', 14, "normal"), height= .1)
+    inputField.pack(fill= "both")
+    message = inputField.get("1.0",tk.END)
     
-    inputField.bind("<Return>", lambda eff: sendMessage(window, inputVar, inputField.get(), listofhosts, eff))
+    
+    
+    
+    inputField.bind("<Return>", lambda eff: sendMessage(window, inputField, listofhosts, eff))
 
 
-def sendMessage(window, inputVar, message, listofhosts, event=None):
+def sendMessage(window, inputField, listofhosts, event=None):
+    message = inputField.get("1.0",tk.END)
     print("Sent: ", message)
 
     for x in listofhosts:
@@ -112,16 +115,17 @@ def sendMessage(window, inputVar, message, listofhosts, event=None):
             pass
     window.winfo_children()[0].insert(tk.END, "Sent: ")
     window.winfo_children()[0].insert(tk.END, message)
-    window.winfo_children()[0].insert(tk.END, "\n"*2)
-    inputVar.set("")
-    
+    window.winfo_children()[0].insert(tk.END, "\n")
+    inputField.delete('1.0',tk.END)
+
+
     
 
 
 def update(window, message):
     window.winfo_children()[0].insert(tk.END, "Incoming: ")
     window.winfo_children()[0].insert(tk.END, message)
-    window.winfo_children()[0].insert(tk.END, "\n"*2)
+    window.winfo_children()[0].insert(tk.END, "\n")
 
 
 def findListofIps():
