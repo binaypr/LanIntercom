@@ -1,14 +1,14 @@
-import os 
+import os
 import socket
 import tkinter as tk
-import datetime
-import time
+
 import threading
 import selectors
 import types
 import pyttsx3
 import concurrent.futures
 import subprocess
+import time
 
 
 def get_ip():
@@ -24,6 +24,7 @@ def get_ip():
 
 
 def startServer(window):
+    
     host = get_ip()
     port = 2345
     num_conns = 1000
@@ -38,7 +39,7 @@ def startServer(window):
     lsock.listen()
     print("listening on", (host, port))
     print("\n"*2)
-    print("--"*10)
+    print("--"*15)
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
@@ -59,7 +60,7 @@ def service_connection(key, mask, sel, window):
     sock = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
-        recv_data = sock.recv(1024)  # Should be ready to read
+        recv_data = sock.recv(1024) 
         if recv_data:
             data.outb += recv_data
         else:
@@ -69,16 +70,23 @@ def service_connection(key, mask, sel, window):
         if data.outb:
             # PRINTS
             incoming = data.outb.decode()
-            engine = pyttsx3.init()
-            engine.say(incoming)
-            engine.runAndWait()
+            s = threading.Thread(target=readOutLoud, args=(incoming,))
+
             print("Incoming: ", incoming)
+            q = threading.Thread(target = update, args=(window,incoming,))
+
             update(window, incoming)
-            sent = sock.send(data.outb)  # Should be ready to write
+            sent = sock.send(data.outb)
             data.outb = data.outb[sent:]
 
+def readOutLoud(incoming):
+    engine = pyttsx3.init()
+    engine.say(incoming)
+    engine.runAndWait()
+
+
 def accept_wrapper(sock, sel):
-    conn, addr = sock.accept()  # Should be ready to read
+    conn, addr = sock.accept()
     conn.setblocking(False)
     data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
@@ -93,16 +101,20 @@ def gui(window, listofhosts):
     inputField.pack(fill= "both")
     message = inputField.get("1.0",tk.END)
     
-    
-    
-    
     inputField.bind("<Return>", lambda eff: sendMessage(window, inputField, listofhosts, eff))
 
 
 def sendMessage(window, inputField, listofhosts, event=None):
     message = inputField.get("1.0",tk.END)
-    print("Sent: ", message)
+    t = threading.Thread(target=sendtoHosts, args=(listofhosts, message,))
+    t.start()
+    window.winfo_children()[0].insert(tk.END, "Sent: ")
+    window.winfo_children()[0].insert(tk.END, message)
+    window.winfo_children()[0].insert(tk.END, "\n")
+    inputField.delete('1.0',tk.END)
+    t.join()
 
+def sendtoHosts(listofhosts, message):
     for x in listofhosts:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -111,16 +123,11 @@ def sendMessage(window, inputField, listofhosts, event=None):
                 s.sendall(sendme.encode())
                 data = s.recv(1024)
                 s.close()
+                print("Was sent to: ", x)
         except:
+            print("Was not send to: ", x)
             pass
-    window.winfo_children()[0].insert(tk.END, "Sent: ")
-    window.winfo_children()[0].insert(tk.END, message)
-    window.winfo_children()[0].insert(tk.END, "\n")
-    inputField.delete('1.0',tk.END)
-
-
     
-
 
 def update(window, message):
     window.winfo_children()[0].insert(tk.END, "Incoming: ")
@@ -188,9 +195,9 @@ def findlistofHosts():
         if checkHost(ip, 445):
             flag = True
             print(ip + " is UP")
-        # elif checkHost(ip, 139):
-        #     flag = True
-        #     print(ip + " is UP")
+        elif checkHost(ip, 139):
+            flag = True
+            print(ip + " is UP")
         # elif checkHost(ip, 138):
         #     flag = True
         #     print(ip + " is UP")
