@@ -1,11 +1,32 @@
-import socket
+import tkinter as tk
+import tkinter.ttk as ttk
+from tkinter import *
 
-HOST = '192.168.1.62'
-PORT = int('1234')
+import time
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect((HOST, PORT))
-    sendme = input()
-    s.sendall(sendme.encode())
-    data = s.recv(1024)
 
+def gui(window, listofhosts):
+
+    scrollbar = ScrollBar(window)
+    scrollbar.pack(side = tk.RIGHT, fill = "y")
+
+
+    messages = tk.Text(font = ('calibre', 14, "normal"))
+    messages.pack(fill ="both", expand = True, side = tk.TOP)
+
+    inputVar = tk.StringVar()
+    inputField = tk.Text(font = ('calibre', 14, "normal"), height= .1)
+    inputField.pack(side= tk.BOTTOM, fill= "both")
+
+    message = inputField.get("1.0",tk.END)
+    messages['yscrollcommand'] = scrollb.set
+    
+
+
+
+window = tk.Tk()
+
+listofhosts = []
+
+gui(window, listofhosts)
+window.mainloop()

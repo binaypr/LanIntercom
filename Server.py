@@ -125,7 +125,7 @@ def sendtoHosts(listofhosts, message):
                 s.close()
                 print("Was sent to: ", x)
         except:
-            print("Was not send to: ", x)
+            print("Was not sent to: ", x)
             pass
     
 
