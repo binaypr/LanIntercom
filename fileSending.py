@@ -13,7 +13,7 @@ root.withdraw()
 file_path = filedialog.askopenfilename(multiple = True, initialdir = os.getcwd())
 
 #Defines a random number to create a temp folder and temp port
-randomNum = random.randint(11111, 99999)
+randomNum = random.randint(1111, 9999)
 
 #Creates a temp folder
 os.makedirs("files/" + str(randomNum))
